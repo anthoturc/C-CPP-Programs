@@ -11,7 +11,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-
 int
 chkname(char *fname)
 {
@@ -19,8 +18,7 @@ chkname(char *fname)
    * fname - the name of the file to check
    *
    * Given the fname of a file, check if it is a file that
-   * is not represented in the di_nlink(s) of the corresponding
-   * ufs2_dinode. 
+   * would cause infinite recursion
    *
    * This include the following directories:
    *  '.', '..', '.snap'
@@ -28,27 +26,6 @@ chkname(char *fname)
   int this = strcmp(".", fname) == 0;
   int parent = strcmp("..", fname) == 0;
   return this || parent;
-}
-
-char *
-mkpadding(int padding) {
-  /* 
-   * tabs - the number of tabs to returns in the string
-   *
-   * Given tabs, return a string of length tabs that will 
-   * contain ' ' characters repeated padding number of times.
-   **/
-  char *pad;
-  
-  if((pad = (char *)malloc(sizeof(padding))) == NULL) {
-    perror("fs-find: malloc in mktabs @ line 44\n");
-  }
-  
-  for (int i = 0; i < padding; ++i) {
-    *(pad+i) = ' ';
-  }
-
-  return pad;
 }
 
 struct ufs2_dinode *
@@ -78,41 +55,31 @@ dfs(struct ufs2_dinode *root, struct fs *spr, char *part, int padding)
    * part - pointer to the partition
    * padding - spacing to place to left of file so that fname is printed
    **/
-
-  /* 
-   * off is used to keep track of where the next direct is in the datablock  
-   * for this root node. After going through a direct, off is incremented by
-   * the size of that direct. This is because not all directs are the same size
-   **/
-  int off = 0;
-  for (int blk = 0; blk < UFS_NDADDR; ++blk) {
-      
-    for (int i = 0; i < root->di_nlink; ++i) {
-      /* the current directory is located via the di_db arr */
+  for (int blk = 0; blk < UFS_NDADDR && root->di_db[blk] != 0; ++blk) {
+    /* 
+     * off is used to keep track of where the next direct is in the datablock  
+     * for this root node. After going through a direct, off is incremented by
+     * the size of that direct. This is because not all directs are the same size
+     **/   
+    int off = 0;  
+    while (off < root->di_size) {
+      /* the list of directs located via the di_db arr */
       struct direct *curr = (struct direct *)(
-          part + (root->di_db[i]*MINBSIZE) + off
+          part + (root->di_db[blk]*MINBSIZE) + off
       );
-      if (chkname(curr->d_name)) { /* '.', '..', so do not include */
-        --i;
-      } else if (curr->d_namlen == 0) { /* no information in direct */
-        continue;
+      if (chkname(curr->d_name) || curr->d_namlen == 0) { 
+        /* '.', '..', or no name so do not include */
       } else {
-        /* Used to generate the tabs required for expressing the hiearchy */
-        char *t = "";
-        if (padding != 0) {
-          t = mkpadding(padding);
-        }
-        
-        printf("%s%s\n", t, curr->d_name);
-        
-        if (padding != 0) {
-          free(t);
-        }
+        /* 
+         * Used to generate the tabs required for expressing the hiearchy 
+         * %*s%s specifies how much left padding to put on the name of the
+         * file/directory
+         **/
 
+        printf("%*s%s\n", padding, "", curr->d_name);
+        
         if (curr->d_type == DT_DIR) { /* Only recurse on directories */
-          /* Get the next inode pointed to by this direct */
           struct ufs2_dinode *child = getnode(curr->d_ino, spr, part);
-
           dfs(child, spr, part, padding+1); /* padding for next level increases by 1 */
         }
       }
@@ -135,13 +102,13 @@ main(int argc, char **argv)
 
   int fd;
   if ((fd = open(argv[1], O_RDONLY)) == -1) {
-    perror("fs-find: open in main @ line 139\n");
+    perror("fs-find: open in main @ line 104\n");
     return 1;
   }
   
   struct stat sb;
   if (fstat(fd, &sb) == -1) {
-    perror("fs-find: fstat in main @ line 144\n");
+    perror("fs-find: fstat in main @ line 110\n");
     return 1;
   }
 
@@ -154,7 +121,7 @@ main(int argc, char **argv)
       MAP_PRIVATE,
       fd,
       0)) == MAP_FAILED) {
-    perror("fs-find: mmap in main @ line 151\n");
+    perror("fs-find: mmap in main @ line 124\n");
     return 1;
   }
 
@@ -168,9 +135,13 @@ main(int argc, char **argv)
   dfs(root, spr, part, 0);
   
   if (close(fd) == -1) {
-    perror("fs-find: close in main @ line 172\n");
+    perror("fs-find: close in main @ line 137\n");
     return 1;
   }
 
+  if (munmap((void *)part, sb.st_size) == -1) {
+    perror("fs-find: munmap in main @ line 142\n");
+  }
+
   return 0;
-} 
+}
