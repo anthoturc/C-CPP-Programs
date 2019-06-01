@@ -1,4 +1,4 @@
-CFlags = -Wall -pedantic -g
+CFlags = -Wall -pedantic -g 
 CC = gcc
 
 snake: snake.c
