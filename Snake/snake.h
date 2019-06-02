@@ -27,7 +27,7 @@
  * This is used to reduce the number of times the board is
  * printed. Otherwise it is too fast.
  **/
-const unsigned int COOLDOWN = 1;
+const unsigned int COOLDOWN = 100000;
 
 /* `W' serves as the width for the 'field of play' or game area */
 #define W 40 
@@ -66,13 +66,23 @@ typedef struct snake {
 /*
  * `apple' will hold the current position of
  * the apple to be displayed on the board.
- * */
+ **/
 typedef struct apple {
   int x;
   int y;
   int val;
 } apple;
 
+/*
+ * At any given time there should be one apple on the board.
+ * This global variable will help ensure that this is the case
+ **/
+int NAPPLES = 0;
+
+/*
+ * `APPLE' defines what the apple should look
+ * like when it is printed
+ * */
 #define APPLE "\u2587"
 
 /*
@@ -99,10 +109,14 @@ typedef struct apple {
  * The following macros are used for
  * keypresses
  **/
-#define w 119
-#define a 97
-#define s 115
-#define d 100
+#define UP 119
+#define LEFT 97
+#define DOWN 115
+#define RIGHT 100
+
+/* Macros related to score */
+#define SCOREOFF 10 /* Offset for printing score in terminal */
+#define MULTIPLIER 5 /* Every apple is worth 5pts */
 
 #endif /* _SNAKE_H_ */
 

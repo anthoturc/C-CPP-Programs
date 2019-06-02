@@ -3,7 +3,6 @@
  *
  * Author: Anthony Turcios 2019
  **/
-
 #ifndef _COLORS_H_
 #define _COLORS_H_
 
