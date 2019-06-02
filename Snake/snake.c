@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <time.h>
 
 #include "snake.h"
 #include "colors.h"
@@ -52,7 +53,22 @@ init_snake()
   gsnek->tail = 1;
 
   gsnek->mode = GAMEON; /* The game will be running to start */
+  gsnek->direction = RIGHT; /* Snake will move right to begin */
   return gsnek;
+}
+
+void
+rand_apple(apple *apel)
+{
+  /* The apple should lie within the board */
+  if (NAPPLES == 0) {
+    srand(time(NULL));
+    apel->x = 1 + rand()%(H-1);
+    apel->y = 1 + rand()%(W-1);
+
+    /* There is now one apple */
+    NAPPLES = 1;
+  }
 }
 
 apple *
@@ -63,17 +79,19 @@ init_apple()
     perror("snake: malloc in init_apple @ line 22\n");
   }
 
-  /* Give the apple a random position in the board */
-  apel->x = rand()%H;
-  apel->y = rand()%W;
-  apel->val = (int)'a';
-
+  /* Give the apple a random position in the board */  
+  apel->val = (int)'A';
+  rand_apple(apel);
+  
   return apel;
 }
 
 void
 print_brd(snake *gsnek, apple *apel)
 {
+  /* Put the apple on the board */
+  board[apel->x][apel->y] = apel->val;
+
   int i, j;
   /* Top section with coner*/
   bred();
@@ -155,6 +173,110 @@ noblock(int state)
   tcsetattr(STDIN_FILENO, TCSANOW, &ttystate);
 }
 
+void
+move(snake *gsnek)
+{ 
+  /* Check for keypress events */
+  int key = 0;
+  if (kbhit()) { /* key was pressed */
+    key = getchar();
+    switch (key) {
+      case UP:
+        if (gsnek->direction != UP && gsnek->direction != DOWN) {
+          --gsnek->x;
+          gsnek->direction = UP;
+        } else {
+          key = 0;
+        }
+        break;
+      case LEFT:
+        if (gsnek->direction != LEFT && gsnek->direction != RIGHT) {
+          --gsnek->y;
+          gsnek->direction = LEFT;
+        } else {
+          key = 0;
+        }
+        break;
+      case DOWN:
+        if (gsnek->direction != DOWN && gsnek->direction != UP) {
+          ++gsnek->x;
+          gsnek->direction = DOWN;
+        } else {
+          key = 0;
+        }
+        break;
+      case RIGHT:
+        if (gsnek->direction != RIGHT && gsnek->direction != LEFT) {
+          ++gsnek->y;
+          gsnek->direction = RIGHT;
+        } else {
+          key = 0;
+        }
+        break;
+    }
+  }
+
+  /* XXX: does this need to be here?
+   * My idea was to use this to avoid filling 
+   * putting things into the `stdin' buffer.
+   *
+   * So pressing 'S' 3 times will not have any effect
+   * I could move fflush to the game loop
+   **/
+  fflush(stdin);
+
+  /* The head should keep moving */
+  if (key == 0) {
+    if (gsnek->direction == DOWN) {
+      ++gsnek->x;
+    } else if (gsnek->direction == UP) {
+      --gsnek->x;
+    } else if (gsnek->direction == LEFT) {
+      --gsnek->y;
+    } else { /* direction is RIGHT */
+      ++gsnek->y;
+    }
+  }
+  ++gsnek->head;
+  board[gsnek->x][gsnek->y] = gsnek->head;
+}
+
+int
+check_collision(snake *gsnek, apple *apel)
+{
+  int sx = gsnek->x, sy = gsnek->y;
+  if (apel == NULL) { /* Check wall collision */
+    if (gsnek->direction == UP) {
+      if (sx+1 == H) return 1;
+    } else if (gsnek->direction == DOWN) {
+      if (sx-1 == -1) return 1;
+    } else if (gsnek->direction == LEFT) {
+      if (sy-1 == -1) return 1;
+    } else { /* Moving RIGHT */
+      if (sy+1 == W) return 1;
+    }
+    return 0;
+  }
+
+  /* Check if snake ate apple */
+  int ax = apel->x, ay = apel->y;
+  int ate = sx == ax && sy == ay;
+  return ate;
+}
+
+void
+rem_up_tail(snake *gsnek)
+{
+  for (int i = 0; i < H; ++i) {
+    for (int j = 0; j < W; ++j) {
+      if (board[i][j] == gsnek->tail) {
+        board[i][j] = 0;
+      }
+    }
+  }
+  ++gsnek->tail;
+}
+
 int
 main(int argc, char **argv)
 {
@@ -168,43 +290,57 @@ main(int argc, char **argv)
     perror("snake: ioctl in main @ line 105\n");
   }
 
-
+  /* Set up for game */
   clear();
   snake *gsnek = init_snake();
   apple *apel = init_apple();
   init_brd(gsnek, apel);
+  int score = 0;
 
-  /* Setup for key press events */
-  int key;
+
+  /* Setup for key press events that are non blocking */
   noblock(NB_ENABLE);
 
   /* game loop */
   while (gsnek->mode == GAMEON) {
-    /* clear the screen and print the board from the origin */
+    /* clear the screen */
     clear();
+
+    /* Print board from origin */  
     goto(0, 0);
     print_brd(gsnek, apel);
+    /* Print the score */
+    bmagenta();
+    printf("Score: ");
+    magenta();
+    printf("%d", score*MULTIPLIER);
 
-    /* Check for keypress events */
-    if (kbhit()) { /* key was pressed */
-      key = getchar();
-      switch (key) {
-        case w:
-          break;
-        case s:
-          break;
-        case a:
-          break;
-        case d:
-          break;
-      }
+    /* Move snake */
+    move(gsnek);
+    /* Remove and update last piece of tail */
+    rem_up_tail(gsnek);
 
+    /* Check if snake ate apple */
+    if (check_collision(gsnek, apel)) {
+      ++score;
+      /* There should be no apples on board now*/ 
+      NAPPLES = 0;
+      /* Old apple position should be empty*/
+      board[apel->x][apel->y] = 0;
+      /* Make a new apple somewhere else */
+      rand_apple(apel);
     }
-    /* move snake*/
 
-
-    //XXX: what if COOL seconds is too long? try nanoseconds?
-    sleep(COOLDOWN);
+    /* Check if snake hit wall */ 
+    if (check_collision(gsnek, NULL)) {
+      break;
+    }
+    /* 
+     * Wait `COOLDOWN' microseconds so that
+     * the game does not move too fast. The printing 
+     * looks bad without this 
+     * */
+    usleep(COOLDOWN);
   }
 
   /* Show the 'GAME OVER!' Screen */
@@ -216,10 +352,11 @@ main(int argc, char **argv)
   sleep(GAMEOVERTIME);
   clear();
 
+  /* Clean up */
   noblock(NB_DISABLE);
-
   free(gsnek);
   free(apel);
+
   return 0;
 }
 
