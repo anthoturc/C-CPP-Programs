@@ -1,56 +1,40 @@
 #include <stdlib.h>
-#include <assert.h>
-#include <string.h>
+#include <stdio.h>
 
 #include "list.h"
 
-void
-init_list(List *list, int memsize, void (*free)(void *))
+int
+list_init(List *list)
 {
-  assert(memsize > 0);
-  list->memsize = memsize;
+  if ((list = (List *)malloc(sizeof(list))) == NULL) {
+    perror("list: malloc in list_init @ line 9\n");
+    return -1;
+  }
+
   list->size = 0;
   list->head = list->tail = NULL;
-  list->free = free;
+  list->head->next = list->tail->next = NULL;
+  return 1;
 }
 
-void
-destroy_list(List *list)
+int
+list_append(List *list, int data)
 {
-  Node *curr;
-  while (list->head != NULL) {
-    curr = list->head;
-    list->head = curr->next;
-
-    if (list->free) {
-      list->free(curr->data);
-    }
-
-    free(curr->data);
-    free(curr);
+  Node *tmp;
+  if ((tmp = (Node *)malloc(sizeof(Node))) == NULL) {
+    perror("list: malloc in list_append @ line 23\n");
+    return -1;
   }
-}
-
-void
-prepend_list(List *list, void *data)
-{
-  Node *node;
-
-  if ((node = (Node *)malloc(sizeof(Node))) == NULL) {
-    perror("")
-}
-
-void
-add(List *list, void *data)
-{
-  Node *new_node;
-
-  if ((new_node = (Node *)malloc(sizeof(Node))) == NULL) {
-    perror("list.c: malloc in add @ line 9\n");
+  if (list->head == NULL) {
+    list->head = tmp; 
+    list->tail = list->head;
+    list->head->next = list->tail->next = NULL;
+  } else {
+    list->tail->next = tmp;
+    list->tail = list->tail->next;
+    list->tail->next = NULL;
   }
+  list->size += 1;
 
-
+  return 1;
 }
-
-
-

@@ -9,28 +9,94 @@
 #define _LIST_H_
 
 typedef struct node {
-  void *data; /* void * allows for generic Node */
-  struct node *node; /* pointer to the next node */
+  int data; /* void * allows for generic Node */
+  struct node *next; /* pointer to the next node */
 } Node;
 
 typedef struct list {
   Node *head; /* pointer to the head node */
   Node *tail; /* pointer to the tail node */
-  int memsize; /* amount of memory taken up by data of each node */
   int size; /* the number of elements in the list */
-  void (*free)(void *); /* pointer to function that will free data */
 } List;
 
-void init_list(List *list, int memsize, int nmembers, void (*free)(void *));
-void destroy_list(List *list);
+/*
+ * list_init will update the value of the list pointer
+ * and set the members of the list data structure
+ * 
+ * Args:
+ *  list - (List *) Pointer to the head of the list
+ *  
+ * Ret:
+ *  1 on success, and -1 on failure.
+ **/
+int list_init(List *list);
 
-void prepend_list(List *list, void *data);
-void append_list(List *list, void *data);
+/*
+ * list_append will add data to the end of the list
+ * 
+ * Args:
+ *  list - (List *) Pointer to the list
+ *  
+ *  data - (int) Data
+ *
+ * Ret:
+ *  1 on success and -1 on failure.
+ **/
+int list_append(List *list, int data);
 
-int size_list(List *list);
+/*
+ * list_prepend will add data to the beginning of the list
+ *
+ * Args:
+ *  list - (List *) Pointer to the list
+ *
+ *  data - (int) Data
+ *
+ * Ret:
+ *  1 on success and -1 on failure.
+ **/
+int list_prepend(List *list, int data);
 
-void for_each_list(List *list, bool (*iterator)(void *));
+/*
+ * list_remove will search for the first instance of data and
+ * remove that data
+ * 
+ * Args:
+ *  list - (List *) Pointer to the list
+ *
+ *  data - (int) Data
+ * 
+ * Ret:
+ *  Value of data if found, bitwise not of data otherwise. 
+ **/
+int list_remove(List *list, int data);
 
+/*
+ * list_find will search the list for the first of data
+ * 
+ * Args:
+ *  list - (List *) Pointer to the list
+ *
+ *  data - (int) Data
+ *
+ * Ret:
+ *  Value of data, bitwise not of data otherwise.
+ **/
+int list_find(List *list, int data);
 
+/*
+ * list_contains will determine if the data exists in the list
+ *
+ * Args:
+ *  list - (List *) Pointer to the list
+ *
+ *  data - (int) Data
+ *
+ * Ret:
+ *  1 if data is in list, 0 otherwise.
+ **/
+int list_contains(List *list, int data);
 
 #endif /* _LIST_H_ */
+
+
