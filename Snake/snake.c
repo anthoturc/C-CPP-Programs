@@ -80,7 +80,7 @@ init_apple()
   }
 
   /* Give the apple a random position in the board */  
-  apel->val = (int)'A';
+  apel->val = APPLEVAL;
   rand_apple(apel);
   
   return apel;
@@ -96,7 +96,7 @@ print_brd(snake *gsnek, apple *apel)
   /* Top section with coner*/
   bred();
   printf("%s", TLCON);
-  for (j = 1; j < W; ++j) {
+  for (j = 1; j < W-1; ++j) {
     printf("%s", HORZ);
   }
   printf("%s\n", TRCON);
@@ -105,11 +105,11 @@ print_brd(snake *gsnek, apple *apel)
   /* Middle section with many spaces including 
    * the snake body
    **/
-  for (i = 1; i <= H; ++i) {
+  for (i = 1; i < H-1; ++i) {
     bred();
     printf("%s", VERT);
     reset();
-    for (j = 1; j < W; ++j) {
+    for (j = 1; j < W-1; ++j) {
       if (board[i][j] == 0) {
         printf(" ");
       } else if (board[i][j] == apel->val) {
@@ -136,7 +136,7 @@ print_brd(snake *gsnek, apple *apel)
   /* Bottom section with corners*/
   bred();
   printf("%s", BLCON);
-  for (j = 1; j < W; ++j) {
+  for (j = 1; j < W-1; ++j) {
     printf("%s", HORZ);
   }
   printf("%s\n", BRCON);
@@ -173,7 +173,7 @@ noblock(int state)
   tcsetattr(STDIN_FILENO, TCSANOW, &ttystate);
 }
 
-void
+int
 move(snake *gsnek)
 { 
   /* Check for keypress events */
@@ -185,6 +185,10 @@ move(snake *gsnek)
         if (gsnek->direction != UP && gsnek->direction != DOWN) {
           --gsnek->x;
           gsnek->direction = UP;
+          /* Check if snake crashed into itself */
+          if (board[gsnek->x][gsnek->y] != 0 && board[gsnek->x][gsnek->y] != APPLEVAL) {
+            return 1;
+          }
         } else {
           key = 0;
         }
@@ -193,6 +197,10 @@ move(snake *gsnek)
         if (gsnek->direction != LEFT && gsnek->direction != RIGHT) {
           --gsnek->y;
           gsnek->direction = LEFT;
+          /* Check if snake crashed into itself */
+          if (board[gsnek->x][gsnek->y] != 0 && board[gsnek->x][gsnek->y] != APPLEVAL) {
+            return 1;
+          }
         } else {
           key = 0;
         }
@@ -201,6 +209,10 @@ move(snake *gsnek)
         if (gsnek->direction != DOWN && gsnek->direction != UP) {
           ++gsnek->x;
           gsnek->direction = DOWN;
+          /* Check if snake crashed into itself */
+          if (board[gsnek->x][gsnek->y] != 0 && board[gsnek->x][gsnek->y] != APPLEVAL) {
+            return 1;
+          }
         } else {
           key = 0;
         }
@@ -209,6 +221,10 @@ move(snake *gsnek)
         if (gsnek->direction != RIGHT && gsnek->direction != LEFT) {
           ++gsnek->y;
           gsnek->direction = RIGHT;
+          /* Check if snake crashed into itself */
+          if (board[gsnek->x][gsnek->y] != 0 && board[gsnek->x][gsnek->y] != APPLEVAL) {
+            return 1;
+          }
         } else {
           key = 0;
         }
@@ -237,8 +253,16 @@ move(snake *gsnek)
       ++gsnek->y;
     }
   }
+  
+  /* Snake crashed into itself */
+  if (board[gsnek->x][gsnek->y] != 0 && board[gsnek->x][gsnek->y] != APPLEVAL) {
+    return 1;
+  }
+  
   ++gsnek->head;
   board[gsnek->x][gsnek->y] = gsnek->head;
+
+  return 0;
 }
 
 int
@@ -247,13 +271,13 @@ check_collision(snake *gsnek, apple *apel)
   int sx = gsnek->x, sy = gsnek->y;
   if (apel == NULL) { /* Check wall collision */
     if (gsnek->direction == UP) {
-      if (sx+1 == H) return 1;
+      if (sx+1 == H || sx == H) return 1;
     } else if (gsnek->direction == DOWN) {
-      if (sx-1 == -1) return 1;
+      if (sx-1 == -1 || sx == -1) return 1;
     } else if (gsnek->direction == LEFT) {
-      if (sy-1 == -1) return 1;
+      if (sy-1 == -1 || sy == -1) return 1;
     } else { /* Moving RIGHT */
-      if (sy+1 == W) return 1;
+      if (sy+1 == W || sy == W) return 1;
     }
     return 0;
   }
@@ -283,7 +307,7 @@ main(int argc, char **argv)
   /* XXX: move this into a different function.
    *
    * Get he size of the terminal. Note that this
-   * does handle resizing windows
+   * does not handle resizing windows
    **/
   struct winsize ws;
   if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1) {
@@ -295,8 +319,6 @@ main(int argc, char **argv)
   snake *gsnek = init_snake();
   apple *apel = init_apple();
   init_brd(gsnek, apel);
-  int score = 0;
-
 
   /* Setup for key press events that are non blocking */
   noblock(NB_ENABLE);
@@ -309,20 +331,19 @@ main(int argc, char **argv)
     /* Print board from origin */  
     goto(0, 0);
     print_brd(gsnek, apel);
-    /* Print the score */
-    bmagenta();
-    printf("Score: ");
-    magenta();
-    printf("%d", score*MULTIPLIER);
 
     /* Move snake */
-    move(gsnek);
+    if (move(gsnek) == 1) {
+      sleep(CRASHED);
+      break;
+    }
+
     /* Remove and update last piece of tail */
     rem_up_tail(gsnek);
 
     /* Check if snake ate apple */
     if (check_collision(gsnek, apel)) {
-      ++score;
+      gsnek->tail -= UPDATELEN;
       /* There should be no apples on board now*/ 
       NAPPLES = 0;
       /* Old apple position should be empty*/
@@ -331,10 +352,6 @@ main(int argc, char **argv)
       rand_apple(apel);
     }
 
-    /* Check if snake hit wall */ 
-    if (check_collision(gsnek, NULL)) {
-      break;
-    }
     /* 
      * Wait `COOLDOWN' microseconds so that
      * the game does not move too fast. The printing 

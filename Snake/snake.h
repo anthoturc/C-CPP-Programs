@@ -17,10 +17,16 @@
 #define GAMEOVER 0
 #define GAMEON 1
 
+
 /*
  * Macro that specifies how long the game over screen will be shown
  **/
 #define GAMEOVERTIME 2
+
+/*
+ * Macro for showing the user that the crashed into themselves
+ **/
+#define CRASHED 2
 
 /* 
  * Constant to determine how long to wait (seconds) for game to sleep.
@@ -86,6 +92,12 @@ int NAPPLES = 0;
 #define APPLE "\u2587"
 
 /*
+ * `APPLEVAL' is the value of the apple
+ * to be used in the board.
+ **/
+#define APPLEVAL -1000
+
+/*
  * The following unicode values are used for making the board that
  * are used to print a square. The extend set of ascii characters 
  * could have been used here, but it is not reliable imo.
@@ -118,7 +130,9 @@ int NAPPLES = 0;
 #define SCOREOFF 10 /* Offset for printing score in terminal */
 #define MULTIPLIER 5 /* Every apple is worth 5pts */
 
+/* `UPDATELEN' is the value the length that 
+ * the snake increases by when eatting an apple
+ **/
+#define UPDATELEN 2
+
 #endif /* _SNAKE_H_ */
-
-
-
