@@ -5,6 +5,10 @@
 
 Heap::Heap() {}
 
+Heap::Heap(std::vector<int> vec) {
+	heaparr = vec;
+}
+
 Heap::~Heap() {}
 
 int
@@ -74,6 +78,52 @@ Heap::peek()
 void
 Heap::insert(int n)
 {
-	int size = heaparr.size();
-	heaparr[size-1] = n;
+	/* Inserts should take place at the last location in the heap! */
+	heaparr.push_back(n);
+
+	int curr = vec.size()-1;
+	int curr_parent = parent(curr)
+	while (vec[curr] > vec[curr_parent]) {
+		swap(vec, curr, curr_parent);	
+		curr = curr_parent;
+		curr_parent = parent(curr);	
+	}
+}
+
+void
+Heap::swap(std::vector<int>& vec, int i, int j)
+{
+	int tmp = vec[i];
+	vec[i] = vec[j];
+	vec[j] = vec[i];
+}
+
+static Heap
+Heap::heapify(std::vector<int> vec)
+{
+	int size = vec;
+	Heap h;
+	for (int i = 0; i < size; ++i) {
+		h.insert(vec[i]);
+	}
+
+	return h;
+}
+
+static Heap
+Heap::heapify(int arr[])
+{
+	int size = sizeof(arr)/sizeof(*a);
+	Heap h;
+	for (int i = 0; i < size; ++i) {
+		h.insert(arr[i]);
+	}
+
+	return h;
+}
+
+bool
+Heap::is_empty()
+{
+	return heaparr.size() == 0;
 }

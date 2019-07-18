@@ -20,8 +20,9 @@ public:
 	int delete_max();
 	int size();
 	int increase_key(int oldkey, int newkey);
-	int is_empty();
+	bool is_empty();
 	static Heap heapify(int arr[]);
+	static Heap heapify(std::vector<int>& vec);
 
 private:
 	std::vector<int> heaparr;
@@ -29,6 +30,8 @@ private:
 	int parent(int idx);
 	int left_child(int idx);
 	int right_child(int idx);
+	void swap(std::vector<int>& vec);
+	void swap(int arr[]);
 };
 
 
