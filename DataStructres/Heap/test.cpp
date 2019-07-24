@@ -1,7 +1,5 @@
+#include <iostream>
 #include <vector>
-#include <limits>
-
-#include "heap.hpp"
 
 int 
 main()
