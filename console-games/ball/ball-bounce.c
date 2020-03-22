@@ -11,7 +11,7 @@
 #include <time.h>
 
 #define DELAY 30000
-#define NOBJS 20
+#define NOBJS 25
 #define NCLRS 8
 
 typedef struct object
