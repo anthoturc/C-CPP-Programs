@@ -7,4 +7,4 @@ ball-bounce : ball-bounce.c
 
 .PHONY : clean
 clean:
-	rm -f ball-bounce
+	rm -f ball-bounce ball
